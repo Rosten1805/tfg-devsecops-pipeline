@@ -1,0 +1,39 @@
+rules:
+  - id: hardcoded-env-fallback-secret
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      Hardcoded fallback value for a secret-looking environment variable. If
+      the env var is unset, this silently falls back to a secret-shaped
+      string literal committed to source instead of failing loudly. Remove
+      the fallback so a missing secret fails fast at startup instead of
+      silently using a value anyone with repo access can read.
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+    patterns:
+      - pattern: process.env.$VAR || "$DEFAULT"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(secret|token|password|credential|api[_-]?key).*
+
+  - id: sql-injection-template-literal
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      SQL query built with a template literal containing an interpolated
+      expression, then passed to a query-executing call. Unless every
+      interpolated value is bound as a parameter, this is a SQL injection
+      vulnerability. Use parameterized placeholders ($1, $2, ...) and pass
+      values through the query's parameter array instead of interpolating
+      them into the query string.
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+    patterns:
+      - pattern-either:
+          - pattern: $CLIENT.query(`...${$X}...`, ...)
+          - pattern: |
+              $Q = `...${$X}...`
+              ...
+              $CLIENT.query($Q, ...)
