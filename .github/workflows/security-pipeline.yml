@@ -1,0 +1,57 @@
+name: Security Pipeline (reusable)
+
+on:
+  workflow_call:
+    secrets:
+      TMDB_API_KEY:
+        required: false
+      TMDB_API_URL:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  sast:
+    name: SAST (Semgrep + Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep + Checkov
+        run: pip install semgrep checkov
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config=p/javascript \
+            --config=p/typescript \
+            --config=p/react \
+            --config=p/nextjs \
+            --config=p/secrets \
+            --config=p/sql-injection \
+            --exclude=node_modules
+
+      - name: Run Checkov on Dockerfile
+        run: checkov -f Dockerfile --compact
+
+  sca:
+    name: SCA (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit
+        run: npm audit --audit-level=high
