@@ -28,6 +28,7 @@ jobs:
       - name: Run Semgrep
         run: |
           semgrep scan \
+            --error \
             --config=p/javascript \
             --config=p/typescript \
             --config=p/react \
