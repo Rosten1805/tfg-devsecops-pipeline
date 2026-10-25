@@ -237,6 +237,12 @@ jobs:
         with:
           target: "http://localhost:3000"
           rules_file_name: ".zap/rules.tsv"
+          # BUG FIXED: zap-baseline.py fails on *any* alert by default,
+          # including WARN-level ones, regardless of the FAIL/WARN/IGNORE
+          # split in rules.tsv - found by running this job for real, not by
+          # reading the docs. -I makes only rules explicitly marked FAIL
+          # actually block the pipeline, matching the intended design.
+          cmd_options: "-I"
           fail_action: true
           allow_issue_writing: false
 
