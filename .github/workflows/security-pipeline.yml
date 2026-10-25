@@ -15,6 +15,14 @@ on:
         required: false
       SONAR_TOKEN:
         required: false
+      NEXTAUTH_SECRET:
+        required: false
+      GOOGLE_ID:
+        required: false
+      GOOGLE_SECRET:
+        required: false
+      DATABASE_URL:
+        required: false
 
 permissions:
   contents: read
@@ -160,3 +168,65 @@ jobs:
       - name: Push image
         if: github.ref == 'refs/heads/main'
         run: docker push "${{ steps.meta.outputs.image }}"
+
+  dast:
+    name: DAST (OWASP ZAP baseline)
+    runs-on: ubuntu-latest
+    needs: [build-and-scan]
+    if: github.ref == 'refs/heads/main' # only against the image that was actually pushed
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          sparse-checkout: |
+            .zap
+          sparse-checkout-cone-mode: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: eu-west-1
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@aded0d722166a37980e030aa969dda0bfe6b6947 # v2.1.7
+
+      - name: Run app container
+        env:
+          IMAGE: ${{ steps.ecr-login.outputs.registry }}/disney-plus-clone:${{ github.sha }}
+        run: |
+          docker run -d --name app -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e NEXTAUTH_URL=http://localhost:3000 \
+            -e NEXTAUTH_SECRET='${{ secrets.NEXTAUTH_SECRET }}' \
+            -e GOOGLE_ID='${{ secrets.GOOGLE_ID }}' \
+            -e GOOGLE_SECRET='${{ secrets.GOOGLE_SECRET }}' \
+            -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+            -e TMDB_API_URL='${{ secrets.TMDB_API_URL }}' \
+            "$IMAGE"
+
+      - name: Wait for app to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/health >/dev/null; then
+              echo "App is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App never became healthy"
+          docker logs app
+          exit 1
+
+      # Passive baseline scan only (no active attack payloads) against the
+      # app's public, unauthenticated pages — see TFT write-up for why
+      # authenticated scanning is deferred rather than attempted here.
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@6c5a007541891231cd9e0ddec25d4f25c59c9874 # v0.15.0
+        with:
+          target: "http://localhost:3000"
+          rules_file_name: ".zap/rules.tsv"
+          fail_action: true
+          allow_issue_writing: false
