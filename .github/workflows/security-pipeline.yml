@@ -7,6 +7,12 @@ on:
         required: false
       TMDB_API_URL:
         required: false
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      AWS_SESSION_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -67,3 +73,58 @@ jobs:
 
       - name: npm audit
         run: npm audit --audit-level=high
+
+  build-and-scan:
+    name: Build + Trivy
+    runs-on: ubuntu-latest
+    needs: [sast, sca]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: eu-west-1
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2.1.7
+
+      - name: Set image tag
+        id: meta
+        run: echo "image=${{ steps.ecr-login.outputs.registry }}/disney-plus-clone:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        env:
+          DOCKER_BUILDKIT: "1"
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TMDB_API_URL: ${{ secrets.TMDB_API_URL }}
+        run: |
+          docker build \
+            --secret id=tmdb_api_key,env=TMDB_API_KEY \
+            --secret id=tmdb_api_url,env=TMDB_API_URL \
+            -t "${{ steps.meta.outputs.image }}" .
+
+      - name: Trivy scan (full report, visibility only)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}
+          format: table
+          severity: "CRITICAL,HIGH,MEDIUM,LOW"
+          exit-code: "0"
+
+      - name: Trivy scan (gate - fixable CRITICAL/HIGH only)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}
+          format: table
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        run: docker push "${{ steps.meta.outputs.image }}"

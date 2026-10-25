@@ -23,22 +23,16 @@ module "alb" {
   container_port    = var.container_port
 }
 
-module "ecs" {
-  source = "./modules/ecs"
+module "ec2" {
+  source = "./modules/ec2"
 
-  project_name       = var.project_name
-  environment        = var.environment
-  vpc_id             = module.networking.vpc_id
-  private_subnet_ids = module.networking.private_subnet_ids
-  ecr_repository_url = module.ecr.repository_url
-  ecr_repository_arn = module.ecr.repository_arn
-  image_tag          = var.image_tag
-  container_port     = var.container_port
-  desired_count      = var.desired_count
-
-  alb_security_group_id = module.alb.alb_security_group_id
-  ecs_security_group_id = module.alb.ecs_security_group_id
-  alb_target_group_arn  = module.alb.target_group_arn
+  project_name          = var.project_name
+  environment           = var.environment
+  public_subnet_id      = module.networking.public_subnet_ids[0]
+  app_security_group_id = module.alb.app_security_group_id
+  ecr_repository_url    = module.ecr.repository_url
+  image_tag             = var.image_tag
+  container_port        = var.container_port
 
   nextauth_url    = var.nextauth_url
   tmdb_api_key    = var.tmdb_api_key
@@ -54,6 +48,12 @@ module "ecs" {
   smtp_from       = var.smtp_from
 }
 
+resource "aws_lb_target_group_attachment" "app" {
+  target_group_arn = module.alb.target_group_arn
+  target_id        = module.ec2.instance_id
+  port             = var.container_port
+}
+
 module "monitoring" {
   source = "./modules/monitoring"
 
@@ -61,8 +61,7 @@ module "monitoring" {
   environment  = var.environment
   alert_email  = var.alert_email
 
-  ecs_cluster_name        = module.ecs.cluster_name
-  ecs_service_name        = module.ecs.service_name
+  instance_id             = module.ec2.instance_id
   alb_arn_suffix          = module.alb.alb_arn_suffix
   target_group_arn_suffix = module.alb.target_group_arn_suffix
 }

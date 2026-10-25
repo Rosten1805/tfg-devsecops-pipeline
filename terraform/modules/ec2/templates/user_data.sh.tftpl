@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf install -y docker
+systemctl enable --now docker
+
+# Short-lived (~12h) ECR auth token, fetched by Terraform at apply time using
+# the operator's own AWS session — not a role on this instance, which has
+# none. Good for the initial pull; a later redeploy needs a fresh apply.
+echo "${ecr_password}" | docker login --username AWS --password-stdin "${ecr_registry}"
+
+docker pull "${image}"
+
+docker run -d \
+  --name app \
+  --restart unless-stopped \
+  -p ${container_port}:${container_port} \
+  -e NODE_ENV=production \
+  -e PORT=${container_port} \
+  -e HOSTNAME=0.0.0.0 \
+  -e GOOGLE_ID='${google_id}' \
+  -e TMDB_API_URL='${tmdb_api_url}' \
+  -e NEXTAUTH_URL='${nextauth_url}' \
+  -e TMDB_API_KEY='${tmdb_api_key}' \
+  -e NEXTAUTH_SECRET='${nextauth_secret}' \
+  -e GOOGLE_SECRET='${google_secret}' \
+  -e DATABASE_URL='${database_url}' \
+%{ if smtp_host != "" ~}
+  -e SMTP_HOST='${smtp_host}' \
+%{ endif ~}
+%{ if smtp_port != "" ~}
+  -e SMTP_PORT='${smtp_port}' \
+%{ endif ~}
+%{ if smtp_user != "" ~}
+  -e SMTP_USER='${smtp_user}' \
+%{ endif ~}
+%{ if smtp_pass != "" ~}
+  -e SMTP_PASS='${smtp_pass}' \
+%{ endif ~}
+%{ if smtp_from != "" ~}
+  -e SMTP_FROM='${smtp_from}' \
+%{ endif ~}
+  "${image}"

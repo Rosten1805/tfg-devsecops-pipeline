@@ -16,42 +16,40 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.alert_email
 }
 
-resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
-  alarm_name          = "${local.name_prefix}-ecs-cpu-high"
+resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
+  alarm_name          = "${local.name_prefix}-ec2-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
   metric_name         = "CPUUtilization"
-  namespace           = "AWS/ECS"
+  namespace           = "AWS/EC2"
   period              = 60
   statistic           = "Average"
   threshold           = 85
-  alarm_description   = "ECS service CPU above 85% for 3 consecutive minutes."
+  alarm_description   = "App instance CPU above 85% for 3 consecutive minutes."
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ClusterName = var.ecs_cluster_name
-    ServiceName = var.ecs_service_name
+    InstanceId = var.instance_id
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
 }
 
-resource "aws_cloudwatch_metric_alarm" "ecs_memory_high" {
-  alarm_name          = "${local.name_prefix}-ecs-memory-high"
+resource "aws_cloudwatch_metric_alarm" "ec2_status_check_failed" {
+  alarm_name          = "${local.name_prefix}-ec2-status-check-failed"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 3
-  metric_name         = "MemoryUtilization"
-  namespace           = "AWS/ECS"
+  evaluation_periods  = 2
+  metric_name         = "StatusCheckFailed"
+  namespace           = "AWS/EC2"
   period              = 60
-  statistic           = "Average"
-  threshold           = 85
-  alarm_description   = "ECS service memory above 85% for 3 consecutive minutes."
+  statistic           = "Maximum"
+  threshold           = 0
+  alarm_description   = "App instance is failing EC2 system/instance status checks."
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ClusterName = var.ecs_cluster_name
-    ServiceName = var.ecs_service_name
+    InstanceId = var.instance_id
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]

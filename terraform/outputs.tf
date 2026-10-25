@@ -7,6 +7,6 @@ output "ecr_repository_url" {
   value = module.ecr.repository_url
 }
 
-output "ecs_cluster_name" {
-  value = module.ecs.cluster_name
+output "instance_public_ip" {
+  value = module.ec2.public_ip
 }
