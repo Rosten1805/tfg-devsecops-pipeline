@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values, or export
+# each as TF_VAR_<name> instead. Never commit real secrets.
+
+alert_email  = "tu-email@example.com"
+nextauth_url = "http://REPLACE-WITH-ALB-DNS-NAME-AFTER-FIRST-APPLY"
+
+tmdb_api_key    = "REPLACE_ME"
+nextauth_secret = "REPLACE_ME" # openssl rand -base64 32
+google_id       = "REPLACE_ME.apps.googleusercontent.com"
+google_secret   = "REPLACE_ME"
+database_url    = "postgresql://REPLACE_ME"
+
+# Optional — leave empty to use the app's disposable test-inbox fallback
+smtp_host = ""
+smtp_port = ""
+smtp_user = ""
+smtp_pass = ""
+smtp_from = ""
+
+# No default on purpose — must match the git-SHA tag CI pushed to ECR
+image_tag = "REPLACE_ME"
