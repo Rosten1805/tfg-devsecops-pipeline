@@ -179,8 +179,13 @@ jobs:
     needs: [build-and-scan]
     if: contains(fromJSON('["refs/heads/main", "refs/heads/test/pipeline-full-green"]'), github.ref) # TEMP: also allow the test branch, revert after verifying deploy # only against the image that was actually pushed
     steps:
+      # BUG FIXED: this was missing `repository:`, so it checked out the
+      # *calling* repo's .zap directory (which doesn't exist) instead of
+      # this pipeline repo's — ZAP silently fell back to no rules file and
+      # failed on any WARN-level finding instead of only the one marked FAIL.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          repository: Rosten1805/tfg-devsecops-pipeline
           sparse-checkout: |
             .zap
           sparse-checkout-cone-mode: false
