@@ -170,14 +170,14 @@ jobs:
           exit-code: "1"
 
       - name: Push image
-        if: github.ref == 'refs/heads/main'
+        if: contains(fromJSON('["refs/heads/main", "refs/heads/test/pipeline-full-green"]'), github.ref) # TEMP: also allow the test branch, revert after verifying deploy
         run: docker push "${{ steps.meta.outputs.image }}"
 
   dast:
     name: DAST (OWASP ZAP baseline)
     runs-on: ubuntu-latest
     needs: [build-and-scan]
-    if: github.ref == 'refs/heads/main' # only against the image that was actually pushed
+    if: contains(fromJSON('["refs/heads/main", "refs/heads/test/pipeline-full-green"]'), github.ref) # TEMP: also allow the test branch, revert after verifying deploy # only against the image that was actually pushed
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -239,7 +239,7 @@ jobs:
     name: Deploy (Terraform apply)
     runs-on: ubuntu-latest
     needs: [dast]
-    if: github.ref == 'refs/heads/main'
+    if: contains(fromJSON('["refs/heads/main", "refs/heads/test/pipeline-full-green"]'), github.ref) # TEMP: also allow the test branch, revert after verifying deploy
     # Requires a "production" GitHub Environment with a required reviewer on
     # the calling repo — the job pauses here until someone approves it, and
     # it never even reaches this point if any earlier job failed. This is
