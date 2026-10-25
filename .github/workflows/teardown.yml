@@ -1,0 +1,54 @@
+name: Teardown (manual)
+
+# Manually triggered only — this destroys all AWS infrastructure. Never runs
+# on a schedule or a push, on purpose: an unattended teardown is exactly the
+# kind of action that should require a human to deliberately start it.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm tearing down all AWS infrastructure'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  destroy:
+    name: Terraform destroy
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'destroy'
+    environment: production # same approval gate as a real deploy
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: eu-west-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.5"
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -input=false
+
+      - name: Terraform destroy
+        working-directory: terraform
+        env:
+          TF_VAR_image_tag: "unused" # not relevant for destroy, but required (no default)
+          TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+          TF_VAR_nextauth_url: ${{ secrets.NEXTAUTH_URL }}
+          TF_VAR_tmdb_api_key: ${{ secrets.TMDB_API_KEY }}
+          TF_VAR_tmdb_api_url: ${{ secrets.TMDB_API_URL }}
+          TF_VAR_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
+          TF_VAR_google_id: ${{ secrets.GOOGLE_ID }}
+          TF_VAR_google_secret: ${{ secrets.GOOGLE_SECRET }}
+          TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+        run: terraform destroy -input=false -auto-approve
