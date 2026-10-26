@@ -55,12 +55,12 @@ jobs:
     name: SAST (Semgrep + Checkov)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # SonarQube Cloud needs full history, not a shallow clone
 
       - name: Checkout custom Semgrep rules
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Rosten1805/tfg-devsecops-pipeline
           path: .pipeline-rules
@@ -115,7 +115,7 @@ jobs:
     name: SCA (npm audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [sast, sca]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -193,7 +193,7 @@ jobs:
       # *calling* repo's .zap directory (which doesn't exist) instead of
       # this pipeline repo's — ZAP silently fell back to no rules file and
       # failed on any WARN-level finding instead of only the one marked FAIL.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Rosten1805/tfg-devsecops-pipeline
           sparse-checkout: |
@@ -271,7 +271,7 @@ jobs:
       # called the workflow, so it's checked out explicitly here (same
       # pattern as the custom Semgrep rules in the sast job).
       - name: Checkout Terraform code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Rosten1805/tfg-devsecops-pipeline
           path: pipeline
