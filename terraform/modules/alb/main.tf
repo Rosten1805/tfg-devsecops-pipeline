@@ -85,6 +85,24 @@ resource "aws_vpc_security_group_egress_rule" "app_http_egress" {
   description       = "HTTP egress - needed for apt/dnf package installs during instance bootstrap"
 }
 
+resource "aws_vpc_security_group_egress_rule" "app_postgres_egress" {
+  security_group_id = aws_security_group.app.id
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+  description       = "Postgres egress to the managed Neon database (DATABASE_URL) - Neon has no fixed IP range to narrow this to"
+}
+
+resource "aws_vpc_security_group_egress_rule" "app_smtp_egress" {
+  security_group_id = aws_security_group.app.id
+  from_port         = 587
+  to_port           = 587
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+  description       = "SMTP submission egress - needed both for a real SMTP relay (SMTP_* vars) and for the Ethereal test-inbox fallback (library/mailer.ts) used when no SMTP_HOST is configured"
+}
+
 resource "aws_lb" "main" {
   name                       = "${local.name_prefix}-alb"
   internal                   = false
