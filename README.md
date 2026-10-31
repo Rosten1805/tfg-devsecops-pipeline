@@ -10,6 +10,8 @@ sobre la que se demuestra
 ([`Disney-Plus-Clone`](https://github.com/Rosten1805/Disney-Plus-Clone)),
 que simplemente lo invoca.
 
+Realizado por **Cristina Cañadas Gómez-Limón** — [cristinagomez-limon.com](https://cristinagomez-limon.com)
+
 ## Cómo se usa
 
 Cualquier repo que quiera aplicar este pipeline añade un workflow mínimo que
