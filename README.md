@@ -43,6 +43,23 @@ jobs:
 | IaC / despliegue | Terraform (AWS) | Implementado |
 | Monitorización | CloudWatch Alarms + SNS | Implementado |
 
+## Vulnerabilidades intencionadas de la aplicación objetivo
+
+La app de ejemplo sobre la que se demuestra el pipeline
+([`Disney-Plus-Clone`](https://github.com/Rosten1805/Disney-Plus-Clone))
+incorpora tres vulnerabilidades reales e intencionadas, documentadas para
+servir de objetivo verificable a los controles de SAST:
+
+| # | Vulnerabilidad | Ubicación | Categoría |
+|---|---|---|---|
+| 1 | Inyección SQL vía plantilla literal sin parametrizar | `library/watchlist.ts`, función `searchWatchlistByTitle` | Inyección |
+| 2 | XSS almacenado vía `dangerouslySetInnerHTML` sin sanitizar | `components/sections/collection/portrait/card.tsx` | Inyección / renderizado inseguro |
+| 3 | Secreto hardcodeado como valor de respaldo | `pages/api/auth/[...nextauth].ts`, fallback del `clientSecret` de Google OAuth | Exposición de secretos |
+
+Las tres son detectadas y bloqueadas por el job `sast` (ver más abajo): las
+reglas genéricas de Semgrep no cubrían la #1 ni la #3, lo que motivó
+escribir las dos reglas personalizadas en `.semgrep/custom-rules.yml`.
+
 ## Flujo del pipeline paso a paso
 
 El workflow (`security-pipeline.yml`) encadena cinco jobs con dependencias
